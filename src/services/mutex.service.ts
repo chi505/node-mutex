@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import { ReleaseTypes } from '../types/release-types';
 
 export class MutexService {
 
@@ -17,16 +18,17 @@ export class MutexService {
 
     // Check if lock exists, return 404 if not.
     // If invalid key provided, return 403.
+    // Return 200 on successful release.
     release(lock: string, key: string): number {
         if (!MutexService.locks.has(lock)) {
-            return 404;
+            return ReleaseTypes.NotFound;
         }
         if (MutexService.locks.get(lock) === key) {
             MutexService.locks.delete(lock);
-            return 200;
+            return ReleaseTypes.Released;
         }
         else {
-            return 403;
+            return ReleaseTypes.InvalidKey;
         }
     }
 
