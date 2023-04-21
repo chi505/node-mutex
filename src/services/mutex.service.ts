@@ -6,6 +6,10 @@ export class MutexService {
     // In a real service, this would be backed by Redis or similar
     private static locks: Map<string, string> = new Map<string, string>();
 
+    static clearLocks() {
+        MutexService.locks = new Map<string, string>()
+    }
+
     // Check if lock already held, generate a UUID for the key and return it if not
     acquire(lock: string): string | null {
         if (!MutexService.locks.has(lock)) {
