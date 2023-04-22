@@ -2,18 +2,22 @@ import { MutexService } from "./src/services/mutex.service"
 
 import express from 'express'
 import bodyParser from 'body-parser'
+import { createClient } from "redis"
 
 const app = express()
 const port = 3000
 
-const mutexService = new MutexService();
+const redisClient = createClient()
+redisClient.connect();
+
+const mutexService = new MutexService(redisClient);
 app.use(bodyParser.json()) // for parsing application/json
 
 // Acquire endpoint
 // Returns a 200 with the key value if lock acquired
 // Returns a 409 if lock already held by another client
-app.post('/acquire', (req: any, res: any) => {
-  const retVal = mutexService.acquire(req.body.lock);
+app.post('/acquire', async (req: any, res: any) => {
+  const retVal = await mutexService.acquire(req.body.lock, req.body.timeout);
   if (retVal) {
     res.send(retVal);
   } else {
@@ -25,8 +29,8 @@ app.post('/acquire', (req: any, res: any) => {
 // Returns a 200 if lock released (with valid key)
 // Returns a 403 if invalid key provided
 // Returns a 404 if lock is not held
-app.post('/release', (req: any, res: any) => {
-  const retVal = mutexService.release(req.body.lock, req.body.key);
+app.post('/release', async (req: any, res: any) => {
+  const retVal = await mutexService.release(req.body.lock, req.body.key);
   res.sendStatus(retVal);
 })
 

@@ -1,20 +1,30 @@
 import { v4 as uuidv4 } from 'uuid';
 import { ReleaseTypes } from '../types/release-types';
+import { RedisClientType, createClient } from 'redis';
 
 export class MutexService {
 
-    // In a real service, this would be backed by Redis or similar
-    private static locks: Map<string, string> = new Map<string, string>();
+    private redisClient: RedisClientType;
 
-    static clearLocks() {
-        MutexService.locks = new Map<string, string>()
+    constructor(redisClient: any){
+        this.redisClient = redisClient;
+        this.redisClient.on('error', err => console.log('Redis Client Error', err));
+
+    }
+
+    async init() {
+        await this.redisClient.connect();
     }
 
     // Check if lock already held, generate a UUID for the key and return it if not
-    acquire(lock: string): string | null {
-        if (!MutexService.locks.has(lock)) {
+    async acquire(lock: string, timeout: number): Promise<string | null> {
+        if (!(await this.redisClient.get(lock))) {
             const uuid = uuidv4();
-            MutexService.locks.set(lock, uuid)
+            await this.redisClient.set(lock, uuid, {
+                NX: true,
+                EX: timeout ?? 10
+              });
+            console.log(`Lock ${lock} acquired, key ${uuid}`)
             return uuid;
         }
         return null;
@@ -23,12 +33,15 @@ export class MutexService {
     // Check if lock exists, return 404 if not.
     // If invalid key provided, return 403.
     // Return 200 on successful release.
-    release(lock: string, key: string): number {
-        if (!MutexService.locks.has(lock)) {
+    async release(lock: string, key: string): Promise<number> {
+        const lockVal = await this.redisClient.get(lock);
+        if (!lockVal) {
             return ReleaseTypes.NotFound;
         }
-        if (MutexService.locks.get(lock) === key) {
-            MutexService.locks.delete(lock);
+        if (lockVal === key) {
+            await this.redisClient.del(lock);
+            console.log(`Lock ${lock} released, key ${key}`)
+
             return ReleaseTypes.Released;
         }
         else {
