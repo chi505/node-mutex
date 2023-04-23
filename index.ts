@@ -9,6 +9,7 @@ const port = 3000
 
 const redisClient = createClient()
 redisClient.connect();
+redisClient.on('error', err => console.log('Redis Client Error', err));
 
 const mutexService = new MutexService(redisClient);
 app.use(bodyParser.json()) // for parsing application/json

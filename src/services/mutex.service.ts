@@ -8,8 +8,6 @@ export class MutexService {
 
     constructor(redisClient: any){
         this.redisClient = redisClient;
-        this.redisClient.on('error', err => console.log('Redis Client Error', err));
-
     }
 
     async init() {
@@ -17,7 +15,7 @@ export class MutexService {
     }
 
     // Check if lock already held, generate a UUID for the key and return it if not
-    async acquire(lock: string, timeout: number): Promise<string | null> {
+    async acquire(lock: string, timeout?: number): Promise<string | null> {
         if (!(await this.redisClient.get(lock))) {
             const uuid = uuidv4();
             await this.redisClient.set(lock, uuid, {
